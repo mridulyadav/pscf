@@ -81,7 +81,7 @@ program pscf
 
    use grid_basis_mod
    use chain_mod
-   use scf_mod,       only : density_startup, density
+   use scf_mod,       only : density_startup, density, input_stress_mod_param
    use iterate_mod,   only : input_iterate_param, output_iterate_param, &
                              itr_algo, domain, &
                              iterate_NR_startup, iterate_NR, &
@@ -175,6 +175,7 @@ program pscf
    logical :: output_flag            = .FALSE. ! deferred iterate output
    logical :: sweep_flag             = .FALSE. ! sweep requested
    logical :: rho_flag               = .FALSE. ! initial_rho_exist
+   logical :: stress_mod_flag        = .FALSE. ! flag for STRESS_MOD
 
    ! Timing variables
    real(long) :: start_time, basis_time, scf_time
@@ -409,6 +410,23 @@ program pscf
          ! Allocate omega, rho, stress (internal routine)
          call allocate_scf_arrays
 
+      case ('STRESS_MOD')
+
+         if (.not.basis_flag) then
+            write(6,*) "Error: Must read BASIS before STRESS_MOD"
+            exit op_loop
+         end if
+         
+         if (group_name /= 'I 41 3 2') then
+            write(6,*) "Error: group_name must be I 41 3 2 for this code"
+            exit op_loop
+         end if
+
+         stress_mod_flag = .TRUE.
+         
+         call input_stress_mod_param()
+        
+
       case ('RESCALE')
 
          ! This command should be read immediately before iterate.
@@ -470,6 +488,9 @@ program pscf
             exit op_loop
          else if (.not.basis_flag) then
             write(6,*) "Error: Must read BASIS before ITERATE"
+            exit op_loop
+         else if (.not.stress_mod_flag) then
+            write(6,*) "Error: Must read STRESS_MOD before ITERATE"
             exit op_loop
          end if
 
@@ -1036,10 +1057,12 @@ contains ! internal subroutines of program pscf
    use chemistry_mod, only : output_chemistry, N_chain, N_solvent, &
                              ensemble,phi_chain,phi_solvent,mu_chain, &
                              mu_solvent, interaction_type, chi
-   use scf_mod, only       : free_energy_FH
+   use scf_mod, only       : free_energy_FH, free_energy_SM
+   use unit_cell_mod, only : cell_param
    character(*) :: prefix
 
    real(long) :: f_homo  ! FH free energy, kT / monomer
+   real(long) :: f_1     ! free_energy due to log and entropic terms
 
    open(file=trim(prefix)//'out',unit=out_unit,status='replace')
    call set_io_units(o=out_unit)
@@ -1111,6 +1134,11 @@ contains ! internal subroutines of program pscf
    f_homo = free_energy_FH(phi_chain,phi_solvent)
    call output(f_homo,     'f_homo')
    call output(pressure,   'pressure')
+
+   call output(cell_param(1), 'a_SG')
+   f_1 = free_energy_SM(cell_param(1))
+   call output(f_1, 'f_1')
+
    select case(ensemble)
    case(0) ! phi was output by output chemistry, so
       if( N_chain > 0 ) then

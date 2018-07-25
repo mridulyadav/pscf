@@ -308,7 +308,7 @@ contains
    do i = 1, N_cell_param
       call make_dGsq(dGsq(:,i), dGG_basis(:,:,i))
    end do
-   stress = scf_stress(N, N_cell_param, dGsq )
+   stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
 
    old_param = cell_param(1:N_cell_param)
    do i = 1, N_cell_param
@@ -328,7 +328,7 @@ contains
       do j = 1, N_cell_param
          call make_dGsq( dGsq(:,j), dGG_basis(:,:,j) )
       end do
-      new_stress = scf_stress(N, N_cell_param, dGsq )
+      new_stress = scf_stress(N, N_cell_param, dGsq , cell_param(1))
       dstress_dcell(:,i) = x * ( new_stress - stress )
    end do
 
@@ -377,7 +377,7 @@ contains
    do i = 1, N_cell_param
       call make_dGsq(dGsq(:,i), dGG_basis(:,:,i))
    end do
-   stress = scf_stress(N, N_cell_param, dGsq )
+   stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
 
    old_param = cell_param(1:N_cell_param)
    do i = 1, N_cell_param
@@ -396,7 +396,7 @@ contains
       do j = 1, N_cell_param
          call make_dGsq( dGsq(:,j), dGG_basis(:,:,j) )
       end do
-      new_stress = scf_stress(N, N_cell_param, dGsq )
+      new_stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
       dstress_dcell(:,i) = x * ( new_stress - stress )
    end do
 

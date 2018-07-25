@@ -376,7 +376,7 @@ contains
    itr = 0
 
    ! Calculate density/stress and residual/error
-   if (domain) stress = scf_stress(N, N_cell_param, dGsq)
+   if (domain) stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
    call make_residual(N, domain, rho, stress, omega, residual)
    !error    = maxval(abs(residual(1:error_index)))
    !error     = maxval(abs(residual))
@@ -482,7 +482,7 @@ contains
    end do iterative_loop
 
    ! If fixed unit cell, calculate residual stress before output
-   if (.not.domain) stress = scf_stress(N, N_cell_param, dGsq)
+   if (.not.domain) stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
 
    contains
       !----------------------------------------------------------
@@ -524,7 +524,7 @@ contains
 
       ! Update density/stress and residuals/error
       call density(N, omega, rho, q, q_solvent)
-      if (domain) stress = scf_stress(N, N_cell_param, dGsq)
+      if (domain) stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
 
       call make_residual(N, domain, rho, stress, omega, residual)
 !     error = maxval(abs(residual))
@@ -607,7 +607,7 @@ contains
 
          ! Calculate trial density/stress and residuals/error
          call density(N, omega, rho, q, q_solvent)
-         if (domain) stress = scf_stress(N, N_cell_param, dGsq)
+         if (domain) stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
          call make_residual(N, domain, rho, stress, omega, residual)
          ! error = maxval(abs(residual(1:error_index)))
          error = maxval(abs(residual))
@@ -1154,7 +1154,7 @@ contains
 
 
       call density(N, omega, rho, q, q_solvent)
-      if (domain) stress = scf_stress(N, N_cell_param, dGsq)
+      if (domain) stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
    
       ! Calculate thermodynamic properties
       call mu_phi_chain(mu_chain, phi_chain, q)
@@ -1467,7 +1467,7 @@ contains
    end do iterative_loop
 
    ! If fixed unit cell, calculate residual stress before output
-   if (.not.domain) stress = scf_stress(N, N_cell_param, dGsq)
+   if (.not.domain) stress = scf_stress(N, N_cell_param, dGsq, cell_param(1))
 
 contains
 

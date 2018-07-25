@@ -26,6 +26,7 @@ module scf_mod
    use grid_basis_mod 
    use chain_mod
    use step_mod
+   use io_mod
    implicit none
 
    private
@@ -42,6 +43,9 @@ module scf_mod
                               ! (optionally calculates pressure)
    public:: free_energy_FH    ! Flory-Huggins helmholtz free energy
    public:: set_omega_uniform ! sets k=0 component of omega (canonical)
+   public:: input_stress_mod_param ! input parameters for STRESS_MOD
+   public:: free_energy_SM    ! Free energy f_1 due to additional log and entropic terms
+
    !# ifdef DEVEL
    public:: divide_energy     ! calculates different components of free energy
    !# endif
@@ -53,6 +57,12 @@ module scf_mod
    type(fft_plan)                     :: plan
    type(chain_grid_type),allocatable  :: chains(:)
    integer                            :: extrap_order
+
+   ! Variables for STRESS_MOD
+   real(long)      :: A_1             ! Entropic Stabilization per junction
+   real(long)      :: B_1             ! Coeffecient of Logarithmic Term
+   real(long)      :: N_bar           ! Invariant degree of polymerization
+   real(long)      :: a_0             ! Unit Cell parameter for Single Gyroid for neat diblock at XN_ODT
 
    !****v scf_mod/plan -------------------------------------------------
    ! VARIABLE
@@ -448,12 +458,13 @@ contains
    !
    ! SOURCE
    !--------------------------------------------------------------------
-   function scf_stress(N, size_dGsq, dGsq )
+   function scf_stress(N, size_dGsq, dGsq, a_SG)
    implicit none
 
    integer,    intent(IN) :: N
    integer,    intent(IN) :: size_dGsq
    real(long), intent(IN) :: dGsq(:,:)
+   real(long), intent(IN) :: a_SG
    !***
 
    real(long)  :: scf_stress(size_dGsq)
@@ -474,6 +485,7 @@ contains
    integer         :: sp_index            ! species index
    integer         :: ibgn,iend
    integer         :: info
+   real(long)      :: df1_da  
 
    allocate( kgrid(0:ngrid(1)/2, 0:ngrid(2)-1, 0:ngrid(3)-1), stat=info )
    if ( info /= 0 ) stop "scf_mod/scf_stress/kgrid(:,:,:) allocation error"
@@ -543,11 +555,34 @@ contains
                       chain_length(sp_index)
       end select
 
+      call output(A_1,'A = ')
+      call output(B_1,'B = ')
+      call output(N_bar, 'N_bar = ')
+      call output(a_0, 'a_0 = ')
+ 
+      df1_da =(1.0/sqrt(N_bar))*(8.0/(a_SG**4))*((3.0*B_1*log(a_SG/a_0)) - B_1 + 3*A_1)
+
+      scf_stress = scf_stress + df1_da
+
    end do
 
    if ( allocated(kgrid) ) deallocate( kgrid )
 
    end function scf_stress
+
+   subroutine input_stress_mod_param()
+   use io_mod
+      write(6,*) 'Entering parameters for STRESS_MOD'
+      call input(A_1,'A')
+      call input(B_1,'B')
+      call input(N_bar,'N_bar')
+      call input(a_0,'a_0')
+
+   end subroutine input_stress_mod_param
+
+
+
+
    !===================================================================
 
 
@@ -937,4 +972,21 @@ contains
    end function free_energy_FH
    !=============================================================
 
+   real(long) function free_energy_SM(a_SG)
+   use io_mod
+   real(long), intent(IN)           :: a_SG ! cell_param for Single Gyroid
+
+   real(long)             :: f_1
+   write(6,*) 'Calculating f_1...'
+      call output(A_1,'A = ')
+      call output(B_1,'B = ')
+      call output(N_bar, 'N_bar = ')
+      call output(a_0, 'a_0 = ')
+
+   f_1 = (-8.0/((a_SG**3)*(sqrt(N_bar))))*(B_1*log(a_SG/a_0) + A_1)
+   
+   free_energy_SM = f_1   
+   
+   end function free_energy_SM
+ 
 end module scf_mod
