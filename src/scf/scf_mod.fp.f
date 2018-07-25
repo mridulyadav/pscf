@@ -555,10 +555,10 @@ contains
                       chain_length(sp_index)
       end select
 
-      call output(A_1,'A = ')
-      call output(B_1,'B = ')
-      call output(N_bar, 'N_bar = ')
-      call output(a_0, 'a_0 = ')
+!      call output(A_1,'A = ')
+!      call output(B_1,'B = ')
+!      call output(N_bar, 'N_bar = ')
+!      call output(a_0, 'a_0 = ')
  
       df1_da =(1.0/sqrt(N_bar))*(8.0/(a_SG**4))*((3.0*B_1*log(a_SG/a_0)) - B_1 + 3*A_1)
 
@@ -572,7 +572,7 @@ contains
 
    subroutine input_stress_mod_param()
    use io_mod
-      write(6,*) 'Entering parameters for STRESS_MOD'
+!      write(6,*) 'Entering parameters for STRESS_MOD'
       call input(A_1,'A')
       call input(B_1,'B')
       call input(N_bar,'N_bar')
@@ -977,11 +977,11 @@ contains
    real(long), intent(IN)           :: a_SG ! cell_param for Single Gyroid
 
    real(long)             :: f_1
-   write(6,*) 'Calculating f_1...'
-      call output(A_1,'A = ')
-      call output(B_1,'B = ')
-      call output(N_bar, 'N_bar = ')
-      call output(a_0, 'a_0 = ')
+!   write(6,*) 'Calculating f_1...'
+!      call output(A_1,'A = ')
+!      call output(B_1,'B = ')
+!      call output(N_bar, 'N_bar = ')
+!      call output(a_0, 'a_0 = ')
 
    f_1 = (-8.0/((a_SG**3)*(sqrt(N_bar))))*(B_1*log(a_SG/a_0) + A_1)
    
