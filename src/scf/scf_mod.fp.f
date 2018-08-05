@@ -486,6 +486,7 @@ contains
    integer         :: ibgn,iend
    integer         :: info
    real(long)      :: df1_da  
+   real(long)      :: g_a
 
    allocate( kgrid(0:ngrid(1)/2, 0:ngrid(2)-1, 0:ngrid(3)-1), stat=info )
    if ( info /= 0 ) stop "scf_mod/scf_stress/kgrid(:,:,:) allocation error"
@@ -560,7 +561,11 @@ contains
 !      call output(N_bar, 'N_bar = ')
 !      call output(a_0, 'a_0 = ')
  
-      df1_da =(1.0/sqrt(N_bar))*(8.0/(a_SG**4))*((3.0*B_1*log(a_SG/a_0)) - B_1 + 3*A_1)
+      g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
+      df1_da = ((-3.0*B_1)/(2.0*a_SG**4))*log(g_a) + (B_1/(2.0*(a_SG**3)))*(1.0/g_a) &
+               *((6.0*A_1)/(B_1*a_0) + & 
+               2.0*((a_SG - a_0)/(a_0**2))) - ((3.0*A_1)/(a_SG**4)) 
+      df1_da = (-8.0/sqrt(N_bar))*df1_da
 
       scf_stress = scf_stress + df1_da
 
@@ -976,14 +981,16 @@ contains
    use io_mod
    real(long), intent(IN)           :: a_SG ! cell_param for Single Gyroid
 
-   real(long)             :: f_1
+   real(long)             :: f_1, g_a
 !   write(6,*) 'Calculating f_1...'
 !      call output(A_1,'A = ')
 !      call output(B_1,'B = ')
 !      call output(N_bar, 'N_bar = ')
 !      call output(a_0, 'a_0 = ')
 
-   f_1 = (-8.0/((a_SG**3)*(sqrt(N_bar))))*(B_1*log(a_SG/a_0) + A_1)
+   g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
+   f_1 = (-8.0/a_SG**3)*(B_1*log(g_a) + A_1)
+   f_1 = (1/sqrt(N_bar))*f_1
    
    free_energy_SM = f_1   
    
