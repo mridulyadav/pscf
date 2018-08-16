@@ -81,7 +81,8 @@ program pscf
 
    use grid_basis_mod
    use chain_mod
-   use scf_mod,       only : density_startup, density, input_stress_mod_param
+   use scf_mod,       only : density_startup, density, input_stress_mod_param, &
+                             ApplyMod
    use iterate_mod,   only : input_iterate_param, output_iterate_param, &
                              itr_algo, domain, &
                              iterate_NR_startup, iterate_NR, &
@@ -411,22 +412,28 @@ program pscf
          call allocate_scf_arrays
 
       case ('STRESS_MOD')
-
+         
          if (.not.basis_flag) then
             write(6,*) "Error: Must read BASIS before STRESS_MOD"
             exit op_loop
          end if
          
-         if (group_name /= 'I 41 3 2') then
-            write(6,*) "Error: group_name must be I 41 3 2 for this code"
-            exit op_loop
-         end if
-
-         stress_mod_flag = .TRUE.
-         
          call input_stress_mod_param()
-        
-
+         if(ApplyMod == 1) then
+                write(6,*) "Applying STRESS_MOD ..."  
+                if (group_name /= 'I 41 3 2' .AND. group_name /= '-1') then
+                        write(6,*) "Error: group_name must be I 41 3 2 or -1 for this code"
+                        exit op_loop
+                end if
+         else if(ApplyMod == 0) then
+                write(6,*) "Continuing without applying STRESS_MOD ..."  
+         else 
+                write(6,*) "Error: Unknown Value for ApplyMod" 
+                exit op_loop
+         end if
+         
+         stress_mod_flag = .TRUE.
+                
       case ('RESCALE')
 
          ! This command should be read immediately before iterate.

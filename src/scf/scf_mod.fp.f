@@ -54,6 +54,9 @@ module scf_mod
    public:: plan              ! module variable, used in iterate_mod
    !***
 
+   ! public variable for STRESS_MOD
+   public       :: ApplyMod   
+
    type(fft_plan)                     :: plan
    type(chain_grid_type),allocatable  :: chains(:)
    integer                            :: extrap_order
@@ -63,6 +66,8 @@ module scf_mod
    real(long)      :: B_1             ! Coeffecient of Logarithmic Term
    real(long)      :: N_bar           ! Invariant degree of polymerization
    real(long)      :: a_0             ! Unit Cell parameter for Single Gyroid for neat diblock at XN_ODT
+   integer         :: ApplyMod        ! 0 =  Don't apply STRESS_MOD, 1 = Apply
+   integer         :: isLamellar           ! 1 = For Lamellar Phase; 0 otherwise   
 
    !****v scf_mod/plan -------------------------------------------------
    ! VARIABLE
@@ -560,14 +565,19 @@ contains
 !      call output(B_1,'B = ')
 !      call output(N_bar, 'N_bar = ')
 !      call output(a_0, 'a_0 = ')
- 
-      g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
-      df1_da = ((-3.0*B_1)/(2.0*a_SG**4))*log(g_a) + (B_1/(2.0*(a_SG**3)))*(1.0/g_a) &
-               *((6.0*A_1)/(B_1*a_0) + & 
-               2.0*((a_SG - a_0)/(a_0**2))) - ((3.0*A_1)/(a_SG**4)) 
-      df1_da = (-8.0/sqrt(N_bar))*df1_da
-
-      scf_stress = scf_stress + df1_da
+      if(ApplyMod == 1) then
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = 0.0
+        else
+                g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
+                df1_da = ((-3.0*B_1)/(2.0*a_SG**4))*log(g_a) + (B_1/(2.0*(a_SG**3)))*(1.0/g_a) &
+                *((6.0*A_1)/(B_1*a_0) + & 
+                2.0*((a_SG - a_0)/(a_0**2))) - ((3.0*A_1)/(a_SG**4)) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if     
+        scf_stress = scf_stress + df1_da
+      end if
 
    end do
 
@@ -578,6 +588,8 @@ contains
    subroutine input_stress_mod_param()
    use io_mod
 !      write(6,*) 'Entering parameters for STRESS_MOD'
+      call input(ApplyMod,'ApplyMod')
+      call input(isLamellar,'isLamellar')
       call input(A_1,'A')
       call input(B_1,'B')
       call input(N_bar,'N_bar')
@@ -987,13 +999,21 @@ contains
 !      call output(B_1,'B = ')
 !      call output(N_bar, 'N_bar = ')
 !      call output(a_0, 'a_0 = ')
+   if(ApplyMod == 1) then
+        g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
+        f_1 = (-8.0/a_SG**3)*((B_1/2.0)*log(g_a) + A_1)
+        f_1 = (1/sqrt(N_bar))*f_1
+   
+        if(isLamellar == 1) then
+                free_energy_SM = 0.0
+        else
+                free_energy_SM = f_1
+        end if
+        free_energy_SM = f_1   
+   else
+        free_energy_SM = 0.0
+   end if   
 
-   g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
-   f_1 = (-8.0/a_SG**3)*(B_1*log(g_a) + A_1)
-   f_1 = (1/sqrt(N_bar))*f_1
-   
-   free_energy_SM = f_1   
-   
    end function free_energy_SM
  
 end module scf_mod

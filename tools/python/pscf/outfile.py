@@ -156,6 +156,8 @@ class OutFile(ParamFile):
         self.f_Helmholtz = self._input_var('real')
         self.f_homo = self._input_var('real')
         self.pressure = self._input_var('real')
+	self.a_SG = self._input_var('real')
+	self.f_1 = self._input_var('real')
         if self.ensemble == 0 :
             if self.N_chain > 0 :
                 self.mu_chain = \
@@ -176,6 +178,9 @@ class OutFile(ParamFile):
         self._output_var('real', 'f_Helmholtz')
         self._output_var('real', 'f_homo')
         self._output_var('real', 'pressure')
+	self._output_var('real', 'a_SG')
+	self._output_var('real', 'f_1')
+
         if self.ensemble == 0 :
             if self.N_chain > 0 :
                 self._output_vec('real', \
