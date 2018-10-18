@@ -492,6 +492,9 @@ contains
    integer         :: info
    real(long)      :: df1_da  
    real(long)      :: g_a
+   real(long)      :: n_exp
+   real(long)      :: chi_val
+   real(long)      :: kappa
 
    allocate( kgrid(0:ngrid(1)/2, 0:ngrid(2)-1, 0:ngrid(3)-1), stat=info )
    if ( info /= 0 ) stop "scf_mod/scf_stress/kgrid(:,:,:) allocation error"
@@ -561,27 +564,103 @@ contains
                       chain_length(sp_index)
       end select
 
-!      call output(A_1,'A = ')
-!      call output(B_1,'B = ')
-!      call output(N_bar, 'N_bar = ')
-!      call output(a_0, 'a_0 = ')
-      if(ApplyMod == 1) then
-        if(isLamellar == 1) then
-                g_a = 0.0
-                df1_da = 0.0
-        else
-                g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
-                df1_da = ((-3.0*B_1)/(2.0*a_SG**4))*log(g_a) + (B_1/(2.0*(a_SG**3)))*(1.0/g_a) &
-                *((6.0*A_1)/(B_1*a_0) + & 
-                2.0*((a_SG - a_0)/(a_0**2))) - ((3.0*A_1)/(a_SG**4)) 
-                df1_da = (-8.0/sqrt(N_bar))*df1_da
-        end if     
-        scf_stress = scf_stress + df1_da
-      end if
 
    end do
 
    if ( allocated(kgrid) ) deallocate( kgrid )
+
+!      call output(A_1,'A = ')
+!      call output(B_1,'B = ')
+!      call output(N_bar, 'N_bar = ')
+!      call output(a_0, 'a_0 = ')
+      chi_val = chi(1,2)
+      call output(chi_val,'chi_val = ')
+      a_0 = 0.589656242 + 0.184418146*(chi_val) &
+            - 0.7572325211E-2*(chi_val**2) + 1.6751767536E-4*(chi_val**3)&
+            - 1.4978411640E-6*(chi_val**4)
+      call output(a_0,'a_0 = ')
+      kappa = 0.1879611 - 5.1619962E-2*(chi_val) &
+            - 4.5552501E-3*(chi_val**2) -1.486153053E-4*(chi_val**3)&
+            - 1.8024645764E-6*(chi_val**4)
+      df1_da = 0.0
+     if(ApplyMod == 1) then
+        write(6,*) 'Applying Mode 1 ...'
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = ((-9.0*(3.1415926535**2))/16.0)*(1.0/(kappa*N_bar))*(1.0/(a_SG**4))
+        else
+                g_a = a_SG/a_0 
+                df1_da = (1/(a_SG**4))*(-3.0*B_1*log(g_a) + B_1 - 3.0*A_1) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if
+       else if(ApplyMod == 2) then
+        write(6,*) 'Applying Mode 2 ...'
+        n_exp = 2.0
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = 0.0 
+        else
+                g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+                df1_da = ((-3.0*B_1)/(n_exp*a_SG**4))*log(g_a) + (B_1/(n_exp*(a_SG**3)))*(1.0/g_a) &
+                                *((3.0*n_exp*A_1)/(B_1*a_0) + & 
+                                n_exp*(((a_SG - a_0)**(n_exp - 1))/(a_0**n_exp))) - ((3.0*A_1)/(a_SG**4)) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if
+       else if(ApplyMod == 3) then
+        write(6,*) 'Applying Mode 3 ...'
+        n_exp = 3.0
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = 0.0
+        else
+                g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+                df1_da = ((-3.0*B_1)/(n_exp*a_SG**4))*log(g_a) + (B_1/(n_exp*(a_SG**3)))*(1.0/g_a) &
+                                *((3.0*n_exp*A_1)/(B_1*a_0) + & 
+                                n_exp*(((a_SG - a_0)**(n_exp - 1))/(a_0**n_exp))) - ((3.0*A_1)/(a_SG**4)) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if
+       else if(ApplyMod == 4) then
+        write(6,*) 'Applying Mode 4 ...'
+        n_exp = 4.0
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = 0.0
+        else
+                g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+                df1_da = ((-3.0*B_1)/(n_exp*a_SG**4))*log(g_a) + (B_1/(n_exp*(a_SG**3)))*(1.0/g_a) &
+                                *((3.0*n_exp*A_1)/(B_1*a_0) + & 
+                                n_exp*(((a_SG - a_0)**(n_exp - 1))/(a_0**n_exp))) - ((3.0*A_1)/(a_SG**4)) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if
+       else if(ApplyMod == 5) then
+        write(6,*) 'Applying Mode 5 ...'
+        n_exp = 1.5
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = 0.0
+        else
+                g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+                df1_da = ((-3.0*B_1)/(n_exp*a_SG**4))*log(g_a) + (B_1/(n_exp*(a_SG**3)))*(1.0/g_a) &
+                                *((3.0*n_exp*A_1)/(B_1*a_0) + & 
+                                n_exp*(((a_SG - a_0)**(n_exp - 1))/(a_0**n_exp))) - ((3.0*A_1)/(a_SG**4)) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if
+       else if(ApplyMod == 6) then
+        write(6,*) 'Applying Mode 6 ...'
+        n_exp = 1.1
+        if(isLamellar == 1) then
+                g_a = 0.0
+                df1_da = 0.0
+        else
+                g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+                df1_da = ((-3.0*B_1)/(n_exp*a_SG**4))*log(g_a) + (B_1/(n_exp*(a_SG**3)))*(1.0/g_a) &
+                                *((3.0*n_exp*A_1)/(B_1*a_0) + & 
+                                n_exp*(((a_SG - a_0)**(n_exp - 1))/(a_0**n_exp))) - ((3.0*A_1)/(a_SG**4)) 
+                df1_da = (-8.0/sqrt(N_bar))*df1_da
+        end if
+      end if
+      scf_stress = scf_stress + df1_da
+      call output(df1_da,'df1_da = ')
 
    end function scf_stress
 
@@ -993,16 +1072,38 @@ contains
    use io_mod
    real(long), intent(IN)           :: a_SG ! cell_param for Single Gyroid
 
-   real(long)             :: f_1, g_a
+   real(long)             :: f_1, g_a, n_exp, chi_val,kappa
+
+   chi_val = chi(1,2)
+   a_0 = 0.589656242 + 0.184418146*(chi_val) &
+            - 0.7572325211E-2*(chi_val**2) + 1.6751767536E-4*(chi_val**3)&
+            - 1.4978411640E-6*(chi_val**4)
+   kappa = 0.1879611 - 5.1619962E-2*(chi_val) &
+            - 4.5552501E-3*(chi_val**2) -1.486153053E-4*(chi_val**3)&
+            - 1.8024645764E-6*(chi_val**4)
+
+
 !   write(6,*) 'Calculating f_1...'
 !      call output(A_1,'A = ')
 !      call output(B_1,'B = ')
 !      call output(N_bar, 'N_bar = ')
 !      call output(a_0, 'a_0 = ')
    if(ApplyMod == 1) then
-        g_a = 1.0 + 6.0*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**2)
-        f_1 = (-8.0/a_SG**3)*((B_1/2.0)*log(g_a) + A_1)
-        f_1 = (1/sqrt(N_bar))*f_1
+        g_a = a_SG/a_0
+        f_1 = (1/(a_SG**3))*(B_1*log(g_a) + A_1)
+        f_1 = (-8.0/sqrt(N_bar))*f_1
+   
+        if(isLamellar == 1) then
+                free_energy_SM = (3.0*(3.1415926535**2)/16.0)*(1.0/(kappa*N_bar))*(1.0/(a_SG**3))
+        else
+                free_energy_SM = f_1
+        end if
+        free_energy_SM = f_1   
+   else if(ApplyMod == 2) then
+        n_exp = 2.0
+        g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+        f_1 = (1/(a_SG**3))*((B_1/n_exp)*log(g_a) + A_1)
+        f_1 = (-8.0/sqrt(N_bar))*f_1
    
         if(isLamellar == 1) then
                 free_energy_SM = 0.0
@@ -1010,6 +1111,54 @@ contains
                 free_energy_SM = f_1
         end if
         free_energy_SM = f_1   
+   else if(ApplyMod == 3) then
+        n_exp = 3.0
+        g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+        f_1 = (1/(a_SG**3))*((B_1/n_exp)*log(g_a) + A_1)
+        f_1 = (-8.0/sqrt(N_bar))*f_1
+   
+        if(isLamellar == 1) then
+                free_energy_SM = 0.0
+        else
+                free_energy_SM = f_1
+        end if
+        free_energy_SM = f_1   
+   else if(ApplyMod == 4) then
+        n_exp = 4.0
+        g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+        f_1 = (1/(a_SG**3))*((B_1/n_exp)*log(g_a) + A_1)
+        f_1 = (-8.0/sqrt(N_bar))*f_1
+   
+        if(isLamellar == 1) then
+                free_energy_SM = 0.0
+        else
+                free_energy_SM = f_1
+        end if
+        free_energy_SM = f_1     
+   else if(ApplyMod == 5) then
+        n_exp = 1.5
+        g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+        f_1 = (1/(a_SG**3))*((B_1/n_exp)*log(g_a) + A_1)
+        f_1 = (-8.0/sqrt(N_bar))*f_1
+   
+        if(isLamellar == 1) then
+                free_energy_SM = 0.0
+        else
+                free_energy_SM = f_1
+        end if
+        free_energy_SM = f_1     
+   else if(ApplyMod == 6) then
+        n_exp = 1.1
+        g_a = 1.0 + (3.0*n_exp)*(A_1/B_1)*((a_SG - a_0)/a_0) + (((a_SG - a_0)/a_0)**n_exp)
+        f_1 = (1/(a_SG**3))*((B_1/n_exp)*log(g_a) + A_1)
+        f_1 = (-8.0/sqrt(N_bar))*f_1
+   
+        if(isLamellar == 1) then
+                free_energy_SM = 0.0
+        else
+                free_energy_SM = f_1
+        end if
+        free_energy_SM = f_1     
    else
         free_energy_SM = 0.0
    end if   

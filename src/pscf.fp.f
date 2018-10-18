@@ -426,10 +426,7 @@ program pscf
                         exit op_loop
                 end if
          else if(ApplyMod == 0) then
-                write(6,*) "Continuing without applying STRESS_MOD ..."  
-         else 
-                write(6,*) "Error: Unknown Value for ApplyMod" 
-                exit op_loop
+                write(6,*) "Continuing without applying STRESS_MOD ..."   
          end if
          
          stress_mod_flag = .TRUE.
