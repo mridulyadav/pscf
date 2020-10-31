@@ -999,9 +999,9 @@ contains
 
    allocate(ipvt(N_hist))
    allocate(work(N_hist))
-   allocate(dev(N_hist+1,N-1+ensemble,N_monomer))
+   allocate(dev(N_hist+1,N-1,N_monomer))
    allocate(dev_cp(N_hist+1,N_cell_param))
-   allocate(om_hist(N_hist+1,N-1+ensemble,N_monomer))
+   allocate(om_hist(N_hist+1,N-1,N_monomer))
    allocate(cp_hist(N_hist+1,N_cell_param))
    allocate(Umn(N_hist,N_hist))
 
@@ -1094,7 +1094,7 @@ contains
    real(long), parameter :: STPMX=100.0_long
 
    ! local Variables
-   integer    :: i, k, alpha, beta, M, info, itr_stress, itr_relax
+   integer    :: i, k, alpha, M, info, itr_stress, itr_relax
    integer    :: error_index
    real(long) :: dGsq(N,N_cell_param), q(N_chain), q_solvent(N_solvent)
    real(long) :: vsum, stpmax
@@ -1104,21 +1104,12 @@ contains
    ! Parameters for Anderson-Mixing
    real(long), allocatable  :: Vm(:,:), Cn(:,:)
    real(long)               :: Vm_2, Cn_2, Umn_2
-   real(long)               :: WW(N-1+ensemble), DD(N-1+ensemble), WW_cp(N_cell_param), DD_cp(N_cell_param)
-   real(long)               :: elm(N-1+ensemble) , elm_cp(N_cell_param)
+   real(long)               :: WW(N-1), DD(N-1), WW_cp(N_cell_param), DD_cp(N_cell_param)
+   real(long)               :: elm(N-1), elm_cp(N_cell_param)
    real(long)               :: dev_2, omega_2
    real(long)               :: lam_AM, f_old
    real(long)               :: error1, error2, error_new, error_new_1
    integer                  :: mm,nn, itr_prev
-   real(long)               :: chi_inv(N_monomer,N_monomer),&
-                               iden(N_monomer,N_monomer),&
-                               ones(N_monomer,N_monomer),&
-                               tmp_mat(N_monomer,N_monomer),&
-                               idem(N_monomer,N_monomer)
-   real(long)               :: work_chi(N_monomer),tmp_vec(N_monomer)
-   integer                  :: ipvt_chi(N_monomer)
-   integer                  :: info_chi
-   real(long)               :: denom
 
    dev=0
    om_hist=0
@@ -1145,63 +1136,11 @@ contains
 
    itr = 0
    do alpha=1,N_monomer
-      om_hist(1,:,alpha) = omega(alpha,2-ensemble:) 
+      om_hist(1,:,alpha) = omega(alpha,2:) 
    end do
    if(domain) cp_hist(1,:) = cell_param(1:N_cell_param) 
 
-   ! Calculating Inverse of the Chi Matrix
-   chi_inv = chi
-
-   ! LU factorization of chi matrix
-   call dgetrf(N_monomer, N_monomer, chi_inv, N_monomer, ipvt_chi, info_chi)
-
-   if (info_chi /= 0) then
-      stop "Anderson Mixing : Chi Matrix is Singular"
-   end if
-
-   ! Calculate inverse
-   call dgetri(N_monomer, chi_inv, N_monomer, ipvt_chi, work_chi,&
-                  N_monomer,info_chi)
-
-   if (info_chi /= 0) then
-      stop "Anderson Mixing : Chi Matrix Inversion Failed"
-   end if
-
-   denom = 0.0_long
-   do alpha=1,N_monomer
-      tmp_vec(alpha) = sum(chi_inv(alpha,:))
-   end do
-   
-   denom = sum(chi_inv(:,:))
-
-   ! Identity Matrix
-   do alpha=1,N_monomer
-      do beta=1,N_monomer
-          if(alpha==beta) then
-                iden(alpha,beta) = 1.0_long
-          else
-                iden(alpha,beta) = 0.0_long
-          end if
-      end do
-   end do   
-
-   ! Ones Matrix
-   do alpha=1,N_monomer
-      do beta=1,N_monomer
-          ones(alpha,beta) = 1.0_long
-      end do
-   end do   
-
-   tmp_mat = matmul(ones, chi_inv)
-
-   ! Idempotent Matrix
-   do alpha=1,N_monomer
-      do beta=1,N_monomer
-          idem(alpha,beta) = iden(alpha,beta) - ((tmp_mat(alpha,beta))/denom)
-      end do
-   end do
-
-  iterative_loop : do
+   iterative_loop : do
 
       itr = itr + 1
     ! Calculating Lambda value need for mixing      
@@ -1228,26 +1167,33 @@ contains
       call divide_energy(rho,omega,phi_chain,phi_solvent,Q,f_Helmholtz,f_component,overlap)
       !# endif
 
-    ! Calculating Deviations
-
-    do alpha=1,N_monomer 
-        do k = 1,N-1+ensemble
-             dev(itr_prev+1,k,alpha) = sum(chi(alpha,:)*rho(:,k+1-ensemble))&
-                         - sum(idem(alpha,:)*omega(:,k+1-ensemble))
-        end do
-             if(ensemble==1) then 
-                   dev(itr_prev+1,1,alpha) = dev(itr_prev+1,1,alpha)-(1.0/denom)
-             endif
-    end do
+    ! Calcuting Deviations
+      do alpha=1,N_monomer
+         if(N_monomer==2)then
+            do k=1,N-1
+               dev(itr_prev+1,k,alpha) = sum(chi(:,alpha)*rho(:,k+1))&!
+                        + sum(omega(:,k+1))/N_monomer - omega(alpha,k+1)
+            end do
    
-    if(domain) dev_cp(itr_prev+1,:) = -stress
+         elseif(N_monomer==3)then
+            do k=1,N-1
+               dev(itr_prev+1,k,alpha) = sum(chi(:,alpha)*rho(:,k+1)) &!
+                      + ( sum(omega(:,k+1)) + chi(1,2)*rho(3,k+1) &!
+             +  chi(2,3)*rho(1,k+1) + chi(1,3)*rho(2,k+1) )/N_monomer &!
+                      - omega(alpha,k+1)
+            end do
+         endif
+   
+      end do
+    
+     if(domain) dev_cp(itr_prev+1,:) = -stress
 
     ! Calculating Error as defined in Matsen AM Papers
       dev_2   = 0.0
       omega_2 = 0.0
       do alpha = 1,N_monomer
          dev_2 = dev_2 + norm_2(dev(itr_prev+1,:,alpha))**2.0
-         omega_2 = omega_2 + norm_2(omega(alpha,2-ensemble:))**2.0
+         omega_2 = omega_2 + norm_2(omega(alpha,2:))**2.0
       end do
       
       error_new_1   = (dev_2/omega_2)**0.5
@@ -1302,7 +1248,7 @@ contains
          
       if(itr==1)then
          do alpha=1,N_monomer
-            omega(alpha,2-ensemble:) = omega(alpha,2-ensemble:) + lam_AM*dev(itr,:,alpha) 
+            omega(alpha,2:) = omega(alpha,2:) + lam_AM*dev(itr,:,alpha) 
          end do
          if(domain) cell_param(1:N_cell_param) = cell_param(1:N_cell_param) + lam_AM*dev_cp(itr,:)
 
@@ -1356,7 +1302,7 @@ contains
          Cn_2 = Vm_2/Umn_2
      
          do alpha = 1,N_monomer
-            WW = omega(alpha,2-ensemble:)
+            WW = omega(alpha,2:)
             DD = dev(itr_prev+1,:,alpha) 
             do nn=1,itr_prev
           
@@ -1364,7 +1310,7 @@ contains
                DD = DD + Cn_2*(dev(itr_prev+1-nn,:,alpha) - dev(itr_prev+1,:,alpha))
          
            end do
-           omega(alpha,2-ensemble:) = WW + lam_AM*DD
+           omega(alpha,2:) = WW + lam_AM*DD
    
          end do      
 
@@ -1439,7 +1385,7 @@ contains
          Cn = matmul(Umn,Vm)
 
          do alpha = 1,N_monomer
-            WW = omega(alpha,2-ensemble:)
+            WW = omega(alpha,2:)
             DD = dev(itr_prev+1,:,alpha) 
             do nn=1,itr_prev
           
@@ -1448,7 +1394,7 @@ contains
          
            end do
    
-           omega(alpha,2-ensemble:) = WW + lam_AM*DD
+           omega(alpha,2:) = WW + lam_AM*DD
    
          end do      
 
@@ -1480,7 +1426,7 @@ contains
       if(itr<N_hist+1)then
 
          do alpha=1,N_monomer
-            om_hist(itr+1,:,alpha) = omega(alpha,2-ensemble:) 
+            om_hist(itr+1,:,alpha) = omega(alpha,2:) 
          end do
          if(domain) cp_hist(itr+1,:) = cell_param(1:N_cell_param) 
 
@@ -1490,7 +1436,7 @@ contains
 
             dev(1:N_hist,:,alpha) = dev(2:N_hist+1,:,alpha)   
             om_hist(1:N_hist,:,alpha) = om_hist(2:N_hist+1,:,alpha)
-            om_hist(N_hist+1,:,alpha) = omega(alpha,2-ensemble:)
+            om_hist(N_hist+1,:,alpha) = omega(alpha,2:)
 
          end do
          if(domain)then
